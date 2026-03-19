@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Madras Meals</title>
+
+    <style>
+        body { font-family: Arial; margin:0; background:#f8f8f8; }
+
+        header {
+            background:#fc8019;
+            color:white;
+            padding:15px;
+            text-align:center;
+            font-size:22px;
+        }
+
+        .tabs { text-align:center; margin:10px; }
+
+        button {
+            padding:8px 15px;
+            margin:5px;
+            background:#fc8019;
+            border:none;
+            color:white;
+            border-radius:8px;
+            cursor:pointer;
+        }
+
+        .section { display:none; }
+
+        .card {
+            background:white;
+            width:200px;
+            margin:10px;
+            display:inline-block;
+            border-radius:10px;
+            box-shadow:0 0 10px gray;
+            padding:10px;
+            text-align:center;
+        }
+
+        img { width:100%; height:120px; }
+
+        .cart, .paymentBox, .bill {
+            background:white;
+            margin:20px;
+            padding:15px;
+            border-radius:10px;
+        }
+
+        input, select {
+            padding:8px;
+            margin:5px;
+        }
+
+        .bill { display:none; }
+
+        @media (max-width:600px){
+            .card { width:90%; }
+            button { width:90%; }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>🍛 Madras Meals</header>
+
+<div class="tabs">
+    <button onclick="showSection('admin')">Admin</button>
+    <button onclick="showSection('customer')">Customer</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section">
+
+    <div id="loginBox" style="text-align:center;">
+        <h2>Admin Login</h2>
+        <input id="user" placeholder="Username"><br>
+        <input id="pass" type="password" placeholder="Password"><br>
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+        <h2 style="text-align:center;">Admin Panel</h2>
+
+        <!-- CHANGE LOGIN -->
+        <center>
+            <h3>Change Admin Login</h3>
+            <input id="newUser" placeholder="New Username"><br>
+            <input id="newPass" placeholder="New Password"><br>
+            <button onclick="changeLogin()">Update Login</button>
+        </center>
+
+        <hr>
+
+        <!-- ADD FOOD -->
+        <center>
+            <input id="name" placeholder="Food Name"><br>
+            <input id="price" placeholder="Price"><br>
+            <input id="image" placeholder="Image (idly.jpg)"><br>
+            <button onclick="addFood()">Add Food</button>
+        </center>
+
+        <div id="list"></div>
+    </div>
+
+</div>
+
+<!-- CUSTOMER -->
+<div id="customer" class="section">
+
+    <center>
+        <input id="search" placeholder="Search food..." onkeyup="searchFood()">
+    </center>
+
+    <h2 style="text-align:center;">Menu</h2>
+
+    <div id="menu"></div>
+
+    <div class="cart">
+        <h3>🛒 Cart</h3>
+        <div id="cartItems"></div>
+        <h4 id="totalPrice">Total: ₹0</h4>
+
+        <h3>Customer Details</h3>
+        <input id="custName" placeholder="Enter Name"><br>
+        <input id="custPhone" placeholder="Phone Number"><br>
+        <input id="custAddress" placeholder="Delivery Address"><br>
+
+        <select id="paymentMethod">
+            <option value="gpay">GPay</option>
+            <option value="card">Credit/Debit Card</option>
+        </select>
+
+        <br><br>
+        <button onclick="proceedPayment()">Proceed</button>
+    </div>
+
+    <div id="cardBox" class="paymentBox" style="display:none;">
+        <h3>💳 Card Details</h3>
+        <input placeholder="Card Number"><br>
+        <input placeholder="Expiry Date"><br>
+        <input placeholder="CVV"><br>
+        <button onclick="placeOrder()">Submit & Place Order</button>
+    </div>
+
+    <div id="bill" class="bill">
+        <div id="billContent"></div>
+        <button onclick="printBill()">Print</button>
+    </div>
+
+</div>
+
+<script>
+
+let foods = JSON.parse(localStorage.getItem("foods")) || [];
+let cart = [];
+
+// DEFAULT LOGIN
+let adminUser = localStorage.getItem("adminUser") || "admin";
+let adminPass = localStorage.getItem("adminPass") || "1234";
+
+// SWITCH
+function showSection(sec){
+    document.getElementById("admin").style.display="none";
+    document.getElementById("customer").style.display="none";
+    document.getElementById(sec).style.display="block";
+
+    displayFood();
+    showFood();
+}
+
+// LOGIN
+function login(){
+    let u=document.getElementById("user").value;
+    let p=document.getElementById("pass").value;
+
+    if(u===adminUser && p===adminPass){
+        document.getElementById("loginBox").style.display="none";
+        document.getElementById("adminPanel").style.display="block";
+    } else {
+        alert("Wrong login");
+    }
+}
+
+// CHANGE LOGIN
+function changeLogin(){
+    let newU = document.getElementById("newUser").value;
+    let newP = document.getElementById("newPass").value;
+
+    if(newU=="" || newP==""){
+        alert("Enter new username and password");
+        return;
+    }
+
+    localStorage.setItem("adminUser", newU);
+    localStorage.setItem("adminPass", newP);
+
+    alert("Login updated successfully!");
+}
+
+// ADD FOOD
+function addFood(){
+    let name=document.getElementById("name").value;
+    let price=document.getElementById("price").value;
+    let image=document.getElementById("image").value;
+
+    foods.push({name,price,image});
+    localStorage.setItem("foods",JSON.stringify(foods));
+
+    displayFood();
+}
+
+// DELETE FOOD
+function deleteFood(i){
+    foods.splice(i,1);
+    localStorage.setItem("foods",JSON.stringify(foods));
+    displayFood();
+}
+
+// ADMIN VIEW
+function displayFood(){
+    let data="";
+    for(let i=0;i<foods.length;i++){
+        data+=`
+        <div class="card">
+            <h4>${foods[i].name}</h4>
+            <img src="${foods[i].image}">
+            <p>₹${foods[i].price}</p>
+            <button onclick="deleteFood(${i})">Delete</button>
+        </div>`;
+    }
+    document.getElementById("list").innerHTML=data;
+}
+
+// CUSTOMER VIEW
+function showFood(){
+    let data="";
+    for(let i=0;i<foods.length;i++){
+        data+=`
+        <div class="card">
+            <h4>${foods[i].name}</h4>
+            <img src="${foods[i].image}">
+            <p>₹${foods[i].price}</p>
+            <button onclick="addToCart(${i})">Add</button>
+        </div>`;
+    }
+    document.getElementById("menu").innerHTML=data;
+}
+
+// SEARCH
+function searchFood(){
+    let value=document.getElementById("search").value.toLowerCase();
+    let data="";
+
+    for(let i=0;i<foods.length;i++){
+        if(foods[i].name.toLowerCase().includes(value)){
+            data+=`
+            <div class="card">
+                <h4>${foods[i].name}</h4>
+                <img src="${foods[i].image}">
+                <p>₹${foods[i].price}</p>
+                <button onclick="addToCart(${i})">Add</button>
+            </div>`;
+        }
+    }
+
+    document.getElementById("menu").innerHTML=data;
+}
+
+// CART WITH QTY
+function addToCart(i){
+    let item = foods[i];
+    let found = cart.find(f => f.name === item.name);
+
+    if(found){
+        found.qty++;
+    } else {
+        cart.push({...item, qty:1});
+    }
+
+    displayCart();
+}
+
+function increase(i){
+    cart[i].qty++;
+    displayCart();
+}
+
+function decrease(i){
+    if(cart[i].qty > 1){
+        cart[i].qty--;
+    } else {
+        cart.splice(i,1);
+    }
+    displayCart();
+}
+
+function displayCart(){
+    let data="";
+    let total=0;
+
+    for(let i=0;i<cart.length;i++){
+        let itemTotal = cart[i].price * cart[i].qty;
+
+        data+=`
+        <p>
+        ${cart[i].name} (x${cart[i].qty}) - ₹${itemTotal}
+        <button onclick="increase(${i})">+</button>
+        <button onclick="decrease(${i})">-</button>
+        </p>`;
+
+        total+=itemTotal;
+    }
+
+    document.getElementById("cartItems").innerHTML=data;
+    document.getElementById("totalPrice").innerText="Total: ₹"+total;
+}
+
+// PAYMENT
+function proceedPayment(){
+    if(cart.length===0){
+        alert("Cart empty");
+        return;
+    }
+
+    let method=document.getElementById("paymentMethod").value;
+
+    if(method==="card"){
+        document.getElementById("cardBox").style.display="block";
+    } else {
+        placeOrder();
+    }
+}
+
+// ORDER + BILL
+function placeOrder(){
+
+    let name = document.getElementById("custName").value;
+    let phone = document.getElementById("custPhone").value;
+    let address = document.getElementById("custAddress").value;
+
+    if(name=="" || phone=="" || address==""){
+        alert("Please fill customer details");
+        return;
+    }
+
+    let total = 0;
+    let items = "";
+
+    for(let i=0;i<cart.length;i++){
+        let itemTotal = cart[i].price * cart[i].qty;
+        total += itemTotal;
+        items += `<p>${cart[i].name} x${cart[i].qty} - ₹${itemTotal}</p>`;
+    }
+
+    let gst = total * 0.05;
+    let finalTotal = total + gst;
+
+    let orderNo = Math.floor(Math.random()*10000);
+    let tokenNo = Math.floor(Math.random()*500);
+
+    alert("Order placed!");
+
+    document.getElementById("bill").style.display="block";
+
+    document.getElementById("billContent").innerHTML = `
+        <h2>Madras Meals</h2>
+        <p>Customer: ${name}</p>
+        <p>Phone: ${phone}</p>
+        <p>Address: ${address}</p>
+        <p>Order No: ${orderNo}</p>
+        <p>Token No: ${tokenNo}</p>
+        <hr>
+        ${items}
+        <hr>
+        <p>Subtotal: ₹${total}</p>
+        <p>GST (5%): ₹${gst.toFixed(2)}</p>
+        <h3>Total: ₹${finalTotal.toFixed(2)}</h3>
+        <h3>Thank you!</h3>
+    `;
+
+    cart=[];
+    displayCart();
+    document.getElementById("cardBox").style.display="none";
+}
+
+// PRINT
+function printBill(){
+    let content = document.getElementById("billContent").innerHTML;
+    let w = window.open("");
+    w.document.write(content);
+    w.print();
+}
+
+showSection("customer");
+
+</script>
+
+</body>
+</html>
